@@ -1,8 +1,13 @@
 HELP.md
 target/
-docs/
+.env
+
+# AI Agent & Prompt files
 AGENTS.md
 SKILL.md
+docs/AI_PROMPTS.md
+.agents/
+
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
