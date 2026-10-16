@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Maven verify (Java 21, MySQL 8.4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: metermind_test
+          MYSQL_USER: metermind
+          MYSQL_PASSWORD: metermind_test_password
+          MYSQL_ROOT_PASSWORD: root_test_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_test_password --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    env:
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3306/metermind_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: metermind
+      SPRING_DATASOURCE_PASSWORD: metermind_test_password
+      # Test-only credentials. Never reuse them outside ephemeral CI.
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v7
+
+      - name: Set up Java and Maven cache
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build and test
+        shell: bash
+        run: |
+          if [ -f ./mvnw ]; then
+            chmod +x ./mvnw
+            ./mvnw --batch-mode --no-transfer-progress clean verify
+          else
+            mvn --batch-mode --no-transfer-progress clean verify
+          fi
