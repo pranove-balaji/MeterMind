@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: Maven verify (Java 21, MySQL 8.4)
+    name: Maven verify (Java 17, MySQL 8.4)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -44,13 +44,13 @@ jobs:
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Set up Java and Maven cache
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'
           cache: maven
 
       - name: Build and test
