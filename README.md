@@ -105,11 +105,30 @@ MeterMind is developed incrementally across 15 focused commits:
 * Docker & Docker Compose (for local MySQL 8.4 container)
 * Git
 
-### Build & Test
+### Local MySQL Setup (Docker Compose)
+Start the local MySQL 8.4 database container:
+```powershell
+# Copy the environment template (optional)
+cp .env.example .env
+
+# Start MySQL in background
+docker compose up -d
+
+# Check container health status
+docker compose ps
+```
+
+### Build & Run Tests
 ```powershell
 # On Windows
-.\mvnw.cmd clean test-compile
+.\mvnw.cmd clean test
 
 # On macOS/Linux
-./mvnw clean test-compile
+./mvnw clean test
 ```
+
+To stop the local database container:
+```powershell
+docker compose down
+```
+
