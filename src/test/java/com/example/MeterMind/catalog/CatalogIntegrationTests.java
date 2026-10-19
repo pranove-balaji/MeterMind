@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,6 +28,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@Transactional
 class CatalogIntegrationTests {
 
     @Autowired
@@ -48,6 +51,7 @@ class CatalogIntegrationTests {
 
     @BeforeEach
     void setupSecondTenant() {
+        planRepository.deleteAll();
         if (!userRepository.existsByEmail("owner2@competitor.test")) {
             secondOrg = organizationRepository.save(new Organization("Beta Tech AI"));
             secondOrgOwner = userRepository.save(new AppUser(
