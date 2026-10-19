@@ -232,4 +232,111 @@ class WalletIntegrationTests {
                         .content(json))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("Owner can debit credits from customer wallet, decrementing balance and recording ledger")
+    void ownerCanDebitCreditsAndRecordLedger() throws Exception {
+        // Setup initial balance: grant 200 credits
+        walletService.grantCredits(org1.getId(), org1Customer.getId(), org1Owner.getId(),
+                new GrantCreditsRequest(200L, "Initial grant", "SEED", "REF-1"));
+
+        String debitJson = """
+            {
+                "amount": 75,
+                "reason": "API usage consumption",
+                "referenceType": "USAGE_BATCH",
+                "referenceId": "BATCH-101"
+            }
+        """;
+
+        mockMvc.perform(post("/owner/customers/" + org1Customer.getId() + "/wallet/debit")
+                        .with(httpBasic("owner@acme.test", "owner123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(debitJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.entryType").value("DEBIT"))
+                .andExpect(jsonPath("$.amount").value(75))
+                .andExpect(jsonPath("$.balanceAfter").value(125))
+                .andExpect(jsonPath("$.reason").value("API usage consumption"));
+
+        // Verify wallet balance
+        CreditWallet wallet = walletRepository.findByCustomerId(org1Customer.getId()).orElseThrow();
+        assertThat(wallet.getBalance()).isEqualTo(125L);
+
+        // Audit reconciliation check
+        assertThat(walletService.reconcileBalance(org1.getId(), org1Customer.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("A wallet with 100 credits rejects a charge of 101 without side effects")
+    void insufficientBalanceRejectsChargeWithoutSideEffects() throws Exception {
+        // Seed exactly 100 credits
+        walletService.grantCredits(org1.getId(), org1Customer.getId(), org1Owner.getId(),
+                new GrantCreditsRequest(100L, "Initial 100 credits", "TEST", "REF-100"));
+
+        String debitJson = """
+            {
+                "amount": 101,
+                "reason": "Excessive debit attempt",
+                "referenceType": "USAGE",
+                "referenceId": "EXCESS-1"
+            }
+        """;
+
+        mockMvc.perform(post("/owner/customers/" + org1Customer.getId() + "/wallet/debit")
+                        .with(httpBasic("owner@acme.test", "owner123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(debitJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Insufficient Balance"))
+                .andExpect(jsonPath("$.availableBalance").value(100))
+                .andExpect(jsonPath("$.requiredCredits").value(101));
+
+        // Invariant verification: Balance MUST remain strictly 100
+        CreditWallet wallet = walletRepository.findByCustomerId(org1Customer.getId()).orElseThrow();
+        assertThat(wallet.getBalance()).isEqualTo(100L);
+
+        // Invariant verification: Ledger entries MUST contain ONLY the 1 grant, NO debit entries
+        var entries = ledgerRepository.findByWalletId(wallet.getId());
+        assertThat(entries).hasSize(1);
+        assertThat(entries.get(0).getEntryType()).isEqualTo(LedgerEntryType.GRANT);
+
+        // Audit reconciliation check
+        assertThat(walletService.reconcileBalance(org1.getId(), org1Customer.getId())).isTrue();
+    }
+
+    @Test
+    @DisplayName("Zero or negative debit amount is rejected with 400 Bad Request")
+    void invalidDebitAmountRejected() throws Exception {
+        String invalidJson = """
+            {
+                "amount": 0,
+                "reason": "Zero amount debit"
+            }
+        """;
+
+        mockMvc.perform(post("/owner/customers/" + org1Customer.getId() + "/wallet/debit")
+                        .with(httpBasic("owner@acme.test", "owner123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Validation Failed"));
+    }
+
+    @Test
+    @DisplayName("Cross-tenant debit is rejected (Org 2 owner cannot debit Org 1 customer)")
+    void crossTenantDebitRejected() throws Exception {
+        String json = """
+            {
+                "amount": 50,
+                "reason": "Unauthorized debit"
+            }
+        """;
+
+        mockMvc.perform(post("/owner/customers/" + org1Customer.getId() + "/wallet/debit")
+                        .with(httpBasic("owner2@competitor.test", "secret123"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isNotFound());
+    }
 }

@@ -50,7 +50,14 @@ public class WalletService {
             throw new IllegalArgumentException("Grant reason is required for auditability");
         }
 
-        CreditWallet wallet = getOrCreateWalletEntity(organizationId, customerId);
+        Customer customer = customerService.getCustomerEntity(organizationId, customerId);
+
+        CreditWallet wallet = walletRepository.findByCustomerIdWithLock(customerId)
+                .orElseGet(() -> {
+                    CreditWallet newWallet = walletRepository.save(new CreditWallet(customer, 0L));
+                    walletRepository.flush();
+                    return newWallet;
+                });
 
         long newBalance = Math.addExact(wallet.getBalance(), request.getAmount());
         wallet.setBalance(newBalance);
@@ -67,6 +74,67 @@ public class WalletService {
                 request.getReferenceId(),
                 actorUserId,
                 request.getReason().trim()
+        );
+
+        CreditLedgerEntry savedEntry = ledgerRepository.save(entry);
+        return new LedgerEntryResponse(savedEntry);
+    }
+
+    @Transactional
+    public LedgerEntryResponse debitCredits(Long organizationId, Long customerId, Long actorUserId, DebitCreditsRequest request) {
+        return debitCredits(
+                organizationId,
+                customerId,
+                actorUserId,
+                request.getAmount(),
+                request.getReferenceType() != null ? request.getReferenceType() : "MANUAL_DEBIT",
+                request.getReferenceId(),
+                request.getReason()
+        );
+    }
+
+    @Transactional
+    public LedgerEntryResponse debitCredits(Long organizationId, Long customerId, Long actorUserId,
+                                            long amount, String referenceType, String referenceId, String reason) {
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Debit amount must be strictly greater than 0");
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("Debit reason is required for auditability");
+        }
+
+        Customer customer = customerService.getCustomerEntity(organizationId, customerId);
+
+        CreditWallet wallet = walletRepository.findByCustomerIdWithLock(customerId)
+                .orElseGet(() -> {
+                    CreditWallet newWallet = walletRepository.save(new CreditWallet(customer, 0L));
+                    walletRepository.flush();
+                    return newWallet;
+                });
+
+        if (wallet.getBalance() < amount) {
+            throw new InsufficientBalanceException(
+                    "Insufficient credit balance. Available: " + wallet.getBalance() + ", Required: " + amount,
+                    wallet.getBalance(),
+                    amount
+            );
+        }
+
+        long newBalance = Math.subtractExact(wallet.getBalance(), amount);
+        wallet.setBalance(newBalance);
+        walletRepository.save(wallet);
+
+        String refType = referenceType != null ? referenceType : "MANUAL_DEBIT";
+
+        CreditLedgerEntry entry = new CreditLedgerEntry(
+                wallet,
+                LedgerEntryType.DEBIT,
+                amount,
+                newBalance,
+                refType,
+                referenceId,
+                actorUserId,
+                reason.trim()
         );
 
         CreditLedgerEntry savedEntry = ledgerRepository.save(entry);

@@ -43,6 +43,20 @@ public class OwnerWalletController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @PostMapping("/debit")
+    public ResponseEntity<LedgerEntryResponse> debitCredits(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable Long customerId,
+            @Valid @RequestBody DebitCreditsRequest request) {
+        LedgerEntryResponse response = walletService.debitCredits(
+                user.getOrganizationId(),
+                customerId,
+                user.getUserId(),
+                request
+        );
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/ledger")
     public ResponseEntity<List<LedgerEntryResponse>> getLedgerHistory(
             @AuthenticationPrincipal CustomUserDetails user,

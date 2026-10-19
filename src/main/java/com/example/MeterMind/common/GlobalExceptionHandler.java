@@ -62,4 +62,17 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
+
+    @ExceptionHandler(com.example.MeterMind.wallet.InsufficientBalanceException.class)
+    public ResponseEntity<Map<String, Object>> handleInsufficientBalance(com.example.MeterMind.wallet.InsufficientBalanceException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", Instant.now().toString());
+        body.put("status", HttpStatus.BAD_REQUEST.value());
+        body.put("error", "Insufficient Balance");
+        body.put("message", ex.getMessage());
+        body.put("availableBalance", ex.getAvailableBalance());
+        body.put("requiredCredits", ex.getRequiredCredits());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
 }
