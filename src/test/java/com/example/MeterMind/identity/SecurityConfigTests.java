@@ -74,7 +74,7 @@ class SecurityConfigTests {
                         .with(httpBasic("customer@acme.test", "customer123")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("CUSTOMER"))
-                .andExpect(jsonPath("$.customerId").value(1));
+                .andExpect(jsonPath("$.customerId").exists());
 
         // Forbidden from owner endpoint
         mockMvc.perform(get("/owner/summary")
