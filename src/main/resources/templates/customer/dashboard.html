@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${vm.displayName} + ' — Account Dashboard | MeterMind'">Customer Dashboard | MeterMind</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header class="navbar">
+    <div class="brand-wrapper">
+        <div class="brand-logo">M</div>
+        <span class="brand-name">MeterMind</span>
+    </div>
+    <div class="nav-user">
+        <div class="user-badge">
+            <span class="user-name" th:text="${vm.displayName}">Customer Name</span>
+            <span class="user-role" th:text="${vm.organizationName} + ' • Client Portal'">Acme Cloud • Client Portal</span>
+        </div>
+        <form th:action="@{/logout}" method="post" style="display: inline;">
+            <button type="submit" class="logout-btn">Sign Out</button>
+        </form>
+    </div>
+</header>
+
+<main class="container">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title" th:text="${vm.displayName}">Client Account</h1>
+            <p class="page-subtitle" th:text="'Account Email: ' + ${vm.email} + ' • Tenant: ' + ${vm.organizationName}">Account Email</p>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <section class="stats-grid">
+        <div class="stat-card highlight">
+            <div class="stat-label">Available Credit Balance</div>
+            <div class="stat-value" style="color: var(--accent-emerald);" th:text="${#numbers.formatInteger(vm.currentBalance, 0, 'COMMA')} + ' cr'">0 cr</div>
+            <div class="stat-subtext">Live remaining spendable units</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Active Plan</div>
+            <div class="stat-value" style="font-size: 1.5rem;" th:text="${vm.planName}">None</div>
+            <div class="stat-subtext" th:if="${vm.planMonthlyCredits != null}" th:text="${#numbers.formatInteger(vm.planMonthlyCredits, 0, 'COMMA')} + ' credits / billing cycle'">500 credits / cycle</div>
+            <div class="stat-subtext" th:unless="${vm.planMonthlyCredits != null}">No included quota</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Subscription Rate</div>
+            <div class="stat-value" style="font-size: 1.5rem;" th:if="${vm.planPrice != null}" th:text="'$' + ${vm.planPrice} + ' / mo'">$0.00 / mo</div>
+            <div class="stat-value" style="font-size: 1.5rem;" th:unless="${vm.planPrice != null}">Free Tier</div>
+            <div class="stat-subtext">Monthly recurring base</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Current Billing Period</div>
+            <div class="stat-value" style="font-size: 1.25rem;" th:if="${vm.periodEnd != null}" th:text="${#temporals.format(vm.periodEnd, 'MMM dd, yyyy')}">Nov 01, 2026</div>
+            <div class="stat-value" style="font-size: 1.25rem;" th:unless="${vm.periodEnd != null}">No Renewal</div>
+            <div class="stat-subtext">Next scheduled reset</div>
+        </div>
+    </section>
+
+    <!-- Charts & Breakdown Grid -->
+    <section class="charts-grid">
+        <div class="content-card">
+            <div class="card-title">
+                <span>Usage Consumption by Feature</span>
+            </div>
+            <div th:if="${vm.featureUsageCredits.empty}" class="empty-state">
+                <div class="empty-icon">📈</div>
+                <p class="empty-text">No usage events logged for your account yet</p>
+            </div>
+            <div th:unless="${vm.featureUsageCredits.empty}" style="height: 260px; position: relative;">
+                <canvas id="customerChart"></canvas>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-title">
+                <span>Feature Summary</span>
+            </div>
+            <div th:if="${vm.featureUsageCredits.empty}" class="empty-state">
+                <p class="empty-text">No billable consumption</p>
+            </div>
+            <ul th:unless="${vm.featureUsageCredits.empty}" class="feature-list">
+                <li th:each="entry : ${vm.featureUsageCredits}" class="feature-item">
+                    <span class="feature-code" th:text="${entry.key}">AI_SUMMARY</span>
+                    <span class="feature-credits" th:text="${#numbers.formatInteger(entry.value, 0, 'COMMA')} + ' cr'">0 cr</span>
+                </li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- Recent Usage & Ledger Grid -->
+    <section class="charts-grid">
+        <!-- Recent Metered Events -->
+        <div class="content-card">
+            <div class="card-title">
+                <span>Recent Metered Usage</span>
+                <span class="badge badge-plan">Top 10</span>
+            </div>
+            <div class="table-responsive">
+                <div th:if="${vm.recentUsageEvents.empty}" class="empty-state">
+                    <p class="empty-text">No recent usage events</p>
+                </div>
+                <table th:unless="${vm.recentUsageEvents.empty}" class="styled-table">
+                    <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Feature</th>
+                        <th style="text-align: right;">Units</th>
+                        <th style="text-align: right;">Cost</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="event : ${vm.recentUsageEvents}">
+                        <td style="color: var(--text-secondary); font-size: 0.8rem;" th:text="${#temporals.format(event.createdAt, 'yyyy-MM-dd HH:mm')}">2026-10-23</td>
+                        <td>
+                            <span class="feature-code" th:text="${event.featureCode}">AI_SUMMARY</span>
+                        </td>
+                        <td style="text-align: right;" th:text="${event.units}">1</td>
+                        <td style="text-align: right; font-weight: 700; color: var(--accent-amber);" th:text="${event.creditsCharged} + ' cr'">5 cr</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Ledger Movements -->
+        <div class="content-card">
+            <div class="card-title">
+                <span>Wallet Ledger Movements</span>
+                <span class="badge badge-grant">Audit Trail</span>
+            </div>
+            <div class="table-responsive">
+                <div th:if="${vm.recentLedgerEntries.empty}" class="empty-state">
+                    <p class="empty-text">No ledger entries recorded</p>
+                </div>
+                <table th:unless="${vm.recentLedgerEntries.empty}" class="styled-table">
+                    <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th style="text-align: right;">Amount</th>
+                        <th style="text-align: right;">Balance</th>
+                        <th>Reason</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="entry : ${vm.recentLedgerEntries}">
+                        <td>
+                            <span th:if="${entry.entryType.name() == 'GRANT'}" class="badge badge-grant">GRANT</span>
+                            <span th:if="${entry.entryType.name() == 'DEBIT'}" class="badge badge-debit">DEBIT</span>
+                            <span th:if="${entry.entryType.name() != 'GRANT' and entry.entryType.name() != 'DEBIT'}" class="badge badge-plan" th:text="${entry.entryType}">TYPE</span>
+                        </td>
+                        <td style="text-align: right; font-weight: 600;" th:text="${entry.amount} + ' cr'">100 cr</td>
+                        <td style="text-align: right; color: var(--text-secondary);" th:text="${entry.balanceAfter} + ' cr'">100 cr</td>
+                        <td style="font-size: 0.8rem; color: var(--text-muted);" th:text="${entry.reason}">Reason</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</main>
+
+<script th:inline="javascript" th:if="${!vm.featureUsageCredits.empty}">
+    const rawData = /*[[${vm.featureUsageCredits}]]*/ {};
+    const labels = Object.keys(rawData);
+    const dataValues = Object.values(rawData);
+
+    const ctx = document.getElementById('customerChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: dataValues,
+                backgroundColor: [
+                    'rgba(99, 102, 241, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(244, 63, 94, 0.8)'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#9ca3af', font: { family: 'Inter' } }
+                }
+            }
+        }
+    });
+</script>
+
+</body>
+</html>

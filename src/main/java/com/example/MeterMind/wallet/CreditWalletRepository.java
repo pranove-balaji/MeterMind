@@ -16,4 +16,7 @@ public interface CreditWalletRepository extends JpaRepository<CreditWallet, Long
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT w FROM CreditWallet w WHERE w.customer.id = :customerId")
     Optional<CreditWallet> findByCustomerIdWithLock(@Param("customerId") Long customerId);
+
+    @Query("SELECT COALESCE(SUM(w.balance), 0) FROM CreditWallet w WHERE w.customer.organization.id = :organizationId")
+    Long sumBalanceByOrganizationId(@Param("organizationId") Long organizationId);
 }
