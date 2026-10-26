@@ -13,6 +13,7 @@ import com.example.MeterMind.wallet.CreditWallet;
 import com.example.MeterMind.wallet.CreditWalletRepository;
 import com.example.MeterMind.wallet.LedgerEntryResponse;
 import com.example.MeterMind.wallet.WalletService;
+import com.example.MeterMind.alerts.AlertService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,19 +33,22 @@ public class UsageService {
     private final SubscriptionRepository subscriptionRepository;
     private final FeaturePriceRepository featurePriceRepository;
     private final CustomerRepository customerRepository;
+    private final AlertService alertService;
 
     public UsageService(UsageEventRepository usageEventRepository,
                         CreditWalletRepository walletRepository,
                         WalletService walletService,
                         SubscriptionRepository subscriptionRepository,
                         FeaturePriceRepository featurePriceRepository,
-                        CustomerRepository customerRepository) {
+                        CustomerRepository customerRepository,
+                        AlertService alertService) {
         this.usageEventRepository = usageEventRepository;
         this.walletRepository = walletRepository;
         this.walletService = walletService;
         this.subscriptionRepository = subscriptionRepository;
         this.featurePriceRepository = featurePriceRepository;
         this.customerRepository = customerRepository;
+        this.alertService = alertService;
     }
 
     @Transactional
@@ -136,6 +140,7 @@ public class UsageService {
         );
 
         UsageEvent saved = usageEventRepository.save(event);
+        alertService.evaluateAlertsOnUsage(organizationId, customerId, debitResponse.getBalanceAfter(), saved);
         return new UsageEventResponse(saved, debitResponse.getBalanceAfter(), false);
     }
 
