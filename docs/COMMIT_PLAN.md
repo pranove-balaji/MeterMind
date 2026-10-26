@@ -154,6 +154,6 @@ After each group of five commits:
 
 ## Progress tracker
 
-- [ ] Day 1: Commits 1–5
-- [ ] Day 2: Commits 6–10
-- [ ] Day 3: Commits 11–15
+- [x] Day 1: Commits 1–5
+- [x] Day 2: Commits 6–10
+- [x] Day 3: Commits 11–15

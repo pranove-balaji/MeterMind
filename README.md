@@ -132,3 +132,54 @@ To stop the local database container:
 docker compose down
 ```
 
+---
+
+## 7. Container Delivery & Version Tagging (GHCR)
+
+MeterMind utilizes a multi-stage, least-privilege Docker image and automated continuous delivery via GitHub Container Registry (GHCR).
+
+### Security & Container Principles
+1. **Multi-Stage Build:** The build environment (`eclipse-temurin:17-jdk-jammy`) compiles and packages the artifact; the minimal runtime (`eclipse-temurin:17-jre-jammy`) packages only the executable jar, reducing image size and attack surface.
+2. **Non-Root Execution (Least Privilege):** The container runtime creates and runs under a dedicated, unprivileged system user `metermind:metermind` (`UID 1001`, `GID 1001`) with no root or sudo privileges.
+3. **Environment-Injected Configuration:** Secrets and datasource credentials are never baked into container layers; they are injected strictly at runtime via environment variables.
+4. **No Premature Live Deployments:** In accordance with production readiness principles, release automation publishes versioned container images to GHCR. Deployment to live hosts (e.g., AWS ECS, GCP Cloud Run, Kubernetes) is deferred until hosting infrastructure and target secret managers are explicitly configured.
+
+### Publishing a Versioned Release
+Releases are triggered automatically when a Git semantic version tag matching `v*` is pushed to GitHub:
+
+```bash
+# 1. Create a version tag
+git tag -a v0.1.0 -m "Release v0.1.0 - MeterMind MVP"
+
+# 2. Push tag to GitHub (triggers .github/workflows/release.yml)
+git push origin v0.1.0
+```
+
+The GitHub Actions workflow will:
+- Check out the source at the tag ref.
+- Build the multi-stage Docker image.
+- Authenticate to GHCR using ephemeral repository-scoped `GITHUB_TOKEN` permissions (`packages: write`).
+- Publish immutable container tags (e.g. `ghcr.io/<owner>/metermind:v0.1.0`, `v0.1`, and `latest`).
+
+### Pulling & Running the Production Container
+Run the published container image with injected MySQL environment variables:
+
+```bash
+# 1. Pull the versioned image
+docker pull ghcr.io/<owner>/metermind:v0.1.0
+
+# 2. Run the container with external MySQL configuration
+docker run -d \
+  --name metermind-app \
+  -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL="jdbc:mysql://<db-host>:3306/metermind?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+  -e SPRING_DATASOURCE_USERNAME="metermind" \
+  -e SPRING_DATASOURCE_PASSWORD="<db-password>" \
+  ghcr.io/<owner>/metermind:v0.1.0
+
+# 3. Verify healthcheck and logs
+docker ps
+docker logs -f metermind-app
+```
+
+
