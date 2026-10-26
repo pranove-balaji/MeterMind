@@ -22,4 +22,6 @@ public interface UsageEventRepository extends JpaRepository<UsageEvent, Long> {
     List<UsageEvent> findTop10ByOrganizationIdOrderByCreatedAtDesc(Long organizationId);
 
     List<UsageEvent> findTop10ByCustomerIdOrderByCreatedAtDesc(Long customerId);
+
+    List<UsageEvent> findByCustomerIdAndCreatedAtAfterOrderByCreatedAtDesc(Long customerId, java.time.Instant after);
 }

@@ -21,6 +21,7 @@ public class CustomerDashboardViewModel {
     private Map<String, Long> featureUsageCredits;
     private List<UsageEvent> recentUsageEvents;
     private List<CreditLedgerEntry> recentLedgerEntries;
+    private com.example.MeterMind.insights.CustomerInsightsDto insights;
 
     public CustomerDashboardViewModel() {
     }
@@ -30,7 +31,8 @@ public class CustomerDashboardViewModel {
                                       Long planMonthlyCredits, Instant periodEnd,
                                       Map<String, Long> featureUsageCredits,
                                       List<UsageEvent> recentUsageEvents,
-                                      List<CreditLedgerEntry> recentLedgerEntries) {
+                                      List<CreditLedgerEntry> recentLedgerEntries,
+                                      com.example.MeterMind.insights.CustomerInsightsDto insights) {
         this.displayName = displayName;
         this.email = email;
         this.organizationName = organizationName;
@@ -42,6 +44,7 @@ public class CustomerDashboardViewModel {
         this.featureUsageCredits = featureUsageCredits;
         this.recentUsageEvents = recentUsageEvents;
         this.recentLedgerEntries = recentLedgerEntries;
+        this.insights = insights;
     }
 
     public String getDisplayName() {
@@ -86,5 +89,9 @@ public class CustomerDashboardViewModel {
 
     public List<CreditLedgerEntry> getRecentLedgerEntries() {
         return recentLedgerEntries;
+    }
+
+    public com.example.MeterMind.insights.CustomerInsightsDto getInsights() {
+        return insights;
     }
 }

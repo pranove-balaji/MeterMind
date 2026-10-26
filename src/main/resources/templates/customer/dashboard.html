@@ -63,6 +63,59 @@
         </div>
     </section>
 
+    <!-- Credit Coach & Runway Forecast Section -->
+    <section th:if="${vm.insights != null}" class="charts-grid" style="margin-bottom: 24px;">
+        <div class="content-card">
+            <div class="card-title">
+                <span>⏱️ Credit Runway Forecast</span>
+                <span th:if="${vm.insights.forecast.status.name() == 'ACTIVE_FORECAST'}" class="badge badge-active" th:text="${vm.insights.forecast.daysRemaining} + ' Days Left'">30 Days Left</span>
+                <span th:if="${vm.insights.forecast.status.name() == 'DEPLETED'}" class="badge badge-exhausted">Depleted</span>
+                <span th:if="${vm.insights.forecast.status.name() == 'INSUFFICIENT_DATA'}" class="badge badge-plan">Insufficient Data</span>
+                <span th:if="${vm.insights.forecast.status.name() == 'INDEFINITE'}" class="badge badge-active">Indefinite</span>
+            </div>
+            <div style="padding: 8px 0;">
+                <div style="display: flex; gap: 24px; margin-bottom: 16px;">
+                    <div>
+                        <div class="stat-label">Daily Burn Rate</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);" th:text="${vm.insights.forecast.averageDailyBurn} + ' cr / day'">0.00 cr / day</div>
+                    </div>
+                    <div>
+                        <div class="stat-label">Measurement Window</div>
+                        <div style="font-size: 1.25rem; font-weight: 600; color: var(--text-secondary);" th:text="${vm.insights.forecast.measurementWindow}">Last 30 days</div>
+                    </div>
+                </div>
+                <div style="background: rgba(255,255,255,0.03); border-radius: 8px; padding: 12px; border-left: 3px solid var(--accent-primary);">
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                        <strong style="color: var(--text-primary);">Assumption:</strong>
+                        <span th:text="${vm.insights.forecast.assumption}">Assumes future consumption continues at the empirical daily burn rate.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-card">
+            <div class="card-title">
+                <span>💡 Credit Coach Insights</span>
+                <span class="badge badge-plan" th:text="${vm.insights.recommendations.size()} + ' Suggestions'">0 Suggestions</span>
+            </div>
+            <div th:if="${vm.insights.recommendations.empty}" class="empty-state" style="padding: 20px 0;">
+                <p class="empty-text">No recommendations at this time — your credit consumption is healthy and balanced.</p>
+            </div>
+            <div th:unless="${vm.insights.recommendations.empty}" style="display: flex; flex-direction: column; gap: 12px;">
+                <div th:each="rec : ${vm.insights.recommendations}" style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <strong style="font-size: 0.95rem; color: var(--text-primary);" th:text="${rec.title}">Recommendation Title</strong>
+                        <span th:if="${rec.severity.name() == 'CRITICAL'}" class="badge badge-exhausted">Critical</span>
+                        <span th:if="${rec.severity.name() == 'WARNING'}" class="badge badge-low">Warning</span>
+                        <span th:if="${rec.severity.name() == 'INFO'}" class="badge badge-plan">Info</span>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 4px;" th:text="${rec.observation}">Observation</div>
+                    <div style="font-size: 0.82rem; color: var(--accent-primary); font-weight: 500;" th:text="'👉 ' + ${rec.actionableAdvice}">Actionable Advice</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Charts & Breakdown Grid -->
     <section class="charts-grid">
         <div class="content-card">

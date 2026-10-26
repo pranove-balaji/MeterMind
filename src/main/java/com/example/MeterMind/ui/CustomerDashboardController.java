@@ -35,17 +35,20 @@ public class CustomerDashboardController {
     private final SubscriptionRepository subscriptionRepository;
     private final UsageEventRepository usageEventRepository;
     private final CreditLedgerEntryRepository ledgerRepository;
+    private final com.example.MeterMind.insights.InsightsService insightsService;
 
     public CustomerDashboardController(CustomerRepository customerRepository,
                                        CreditWalletRepository walletRepository,
                                        SubscriptionRepository subscriptionRepository,
                                        UsageEventRepository usageEventRepository,
-                                       CreditLedgerEntryRepository ledgerRepository) {
+                                       CreditLedgerEntryRepository ledgerRepository,
+                                       com.example.MeterMind.insights.InsightsService insightsService) {
         this.customerRepository = customerRepository;
         this.walletRepository = walletRepository;
         this.subscriptionRepository = subscriptionRepository;
         this.usageEventRepository = usageEventRepository;
         this.ledgerRepository = ledgerRepository;
+        this.insightsService = insightsService;
     }
 
     @GetMapping
@@ -77,6 +80,12 @@ public class CustomerDashboardController {
                 ? ledgerRepository.findByWalletIdOrderByCreatedAtDesc(wallet.getId()).stream().limit(10).toList()
                 : List.of();
 
+        com.example.MeterMind.insights.CustomerInsightsDto insights = insightsService.getCustomerInsights(
+                user.getOrganizationId(),
+                customerId,
+                30
+        );
+
         CustomerDashboardViewModel vm = new CustomerDashboardViewModel(
                 customer.getDisplayName(),
                 customer.getEmail(),
@@ -88,7 +97,8 @@ public class CustomerDashboardController {
                 sub != null ? sub.getCurrentPeriodEnd() : null,
                 featureUsageCredits,
                 recentUsage,
-                recentLedger
+                recentLedger,
+                insights
         );
 
         model.addAttribute("vm", vm);
